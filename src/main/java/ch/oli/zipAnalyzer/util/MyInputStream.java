@@ -1,4 +1,4 @@
-package ch.oli.zipAnalyzer;
+package ch.oli.zipAnalyzer.util;
 
 import java.io.*;
 
@@ -6,7 +6,7 @@ public class MyInputStream extends FilterInputStream {
 
     private final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-    protected MyInputStream(InputStream is) {
+    public MyInputStream(InputStream is) {
         super(is);
     }
 

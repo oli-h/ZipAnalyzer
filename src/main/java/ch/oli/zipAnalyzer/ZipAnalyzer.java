@@ -1,5 +1,10 @@
 package ch.oli.zipAnalyzer;
 
+import ch.oli.zipAnalyzer.decoder.DataDescriptor;
+import ch.oli.zipAnalyzer.decoder.Decoder;
+import ch.oli.zipAnalyzer.util.ANSI;
+import ch.oli.zipAnalyzer.util.MyInputStream;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.EOFException;
@@ -21,33 +26,28 @@ public class ZipAnalyzer {
         // 7z a test.zip test_0.txt
 
 
-        try (MyInputStream mis = new MyInputStream(new BufferedInputStream(Files.newInputStream(path), 1024))) {
+        try (MyInputStream myIS = new MyInputStream(new BufferedInputStream(Files.newInputStream(path), 1024))) {
             int pos = 0;
             boolean nextDataDescriptorIsZip64 = false;
             while (true) {
-                mis.mark(4);
-                int id = (int) mis.read4();
-                mis.reset();
-                ZipSig zipSig = ZipSig.of(id);
-
-                if (zipSig == null) {
-                    mis.skip(1);
+                Decoder decoder = Decoder.select(myIS);
+                if (decoder == null) {
+                    myIS.skip(1);
                     pos++;
                     continue;
                 }
 
-                Decoder decoder = zipSig.decoderClass.getDeclaredConstructor().newInstance();
-                if(decoder instanceof DecoderDataDescriptor && nextDataDescriptorIsZip64) {
-                    ((DecoderDataDescriptor)decoder).parseAsZip64();
+                if (decoder instanceof DataDescriptor && nextDataDescriptorIsZip64) {
+                    ((DataDescriptor) decoder).parseAsZip64();
                 }
-                decoder.parse(mis);
+                decoder.parse(myIS);
                 nextDataDescriptorIsZip64 = decoder.foundZip64Extra;
 
-                System.out.format("%6x %-14s: ", pos, zipSig);
+                System.out.format(ANSI.BOLD + "%7x %s: ", pos, decoder.name());
                 System.out.print(decoder);
-                System.out.println();
-                System.out.println("                       " + decoder.rawAsString());
-                System.out.println("                       " + decoder.fieldNamesAsString());
+                System.out.println(ANSI.RESET);
+                System.out.println("        " + decoder.rawAsString());
+                System.out.println("        " + decoder.fieldNamesAsString());
 
                 pos += decoder.raw.length;
             }

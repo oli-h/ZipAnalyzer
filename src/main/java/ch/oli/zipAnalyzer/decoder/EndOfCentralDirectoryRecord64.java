@@ -1,8 +1,11 @@
-package ch.oli.zipAnalyzer;
+package ch.oli.zipAnalyzer.decoder;
 
 import java.io.IOException;
 
-public class DecoderEndOfCentralDirectoryRecord64 extends Decoder {
+/**
+ * chapter 4.3.14 Zip64 end of central directory record
+ */
+public class EndOfCentralDirectoryRecord64 extends Decoder {
     public long thisSize;
     public int  versionMadeBy;
     public int  versionNeedTpExtract;

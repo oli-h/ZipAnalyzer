@@ -1,10 +1,13 @@
-package ch.oli.zipAnalyzer;
+package ch.oli.zipAnalyzer.decoder;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-public class DecoderLocalFileHeader extends Decoder {
+/**
+ * chapter 4.3.7  Local file header
+ */
+public class LocalFileHeader extends Decoder {
     public int    versionNeededToExtract;
     public int    flags                 ;
     public int    method                ;
@@ -25,10 +28,10 @@ public class DecoderLocalFileHeader extends Decoder {
         fileTime               = read2("time");
         fileDate               = read2("date");
         crc                    = read4("crc" );
-        sizeCompr              = read4("sizeCompressed");
+        sizeCompr              = read4("sizeCompr");
         sizeUncompr            = read4("size");
-        fileNameLen            = read2("nameLen");
-        extraFieldLen          = read2("xtraLen");
+        fileNameLen            = read2("nameL");
+        extraFieldLen          = read2("xtraL");
 
         Charset cs;
         if (((flags >> 11) & 1) == 1) {

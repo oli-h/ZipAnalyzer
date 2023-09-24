@@ -1,8 +1,11 @@
-package ch.oli.zipAnalyzer;
+package ch.oli.zipAnalyzer.decoder;
 
 import java.io.IOException;
 
-public class DecoderDataDescriptor extends Decoder {
+/**
+ * chapter 4.3.9  Data descriptor (but also 8.5.3 Spanned/Split archives)
+ */
+public class DataDescriptor extends Decoder {
     public long crc        ;
     public long sizeCompr  ;
     public long sizeUncompr;
@@ -16,10 +19,10 @@ public class DecoderDataDescriptor extends Decoder {
     protected void internalParse() throws IOException {
         crc         = read4("crc" );
         if (pasreAsZip64) {
-            sizeCompr   = read8("sizeCompressed");
+            sizeCompr   = read8("sizeCompr");
             sizeUncompr = read8("size");
         } else {
-            sizeCompr   = read4("sizeCompressed");
+            sizeCompr   = read4("sizeCompr");
             sizeUncompr = read4("size");
         }
     }

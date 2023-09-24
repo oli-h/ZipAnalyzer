@@ -1,8 +1,11 @@
-package ch.oli.zipAnalyzer;
+package ch.oli.zipAnalyzer.decoder;
 
 import java.io.IOException;
 
-public class DecoderEndOfCentralDirectoryRecord extends Decoder {
+/**
+ * chapter 4.3.16 End of central directory record
+ */
+public class EndOfCentralDirectoryRecord extends Decoder {
     public int    thisDiskNum                 ;
     public int    diskNumCentralDir           ;
     public int    numCentralDirEntriesThisDisk;
@@ -20,7 +23,7 @@ public class DecoderEndOfCentralDirectoryRecord extends Decoder {
         numCentralDirEntriesTotal    = read2("numEntriesTotal");
         sizeOfCentralDir             = read4("sizeOfCentral");
         centralDirOffset             = read4("offsetOfCentral");
-        commentLen                   = read2("commentLen" );
+        commentLen                   = read2("commentL");
         comment = new String(read("comment",commentLen));
     }
 

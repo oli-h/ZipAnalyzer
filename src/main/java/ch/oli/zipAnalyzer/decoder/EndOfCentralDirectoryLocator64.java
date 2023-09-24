@@ -1,8 +1,11 @@
-package ch.oli.zipAnalyzer;
+package ch.oli.zipAnalyzer.decoder;
 
 import java.io.IOException;
 
-public class DecoderEndOfCentralDirectoryLocator64 extends Decoder {
+/**
+ * chapter 4.3.15 Zip64 end of central directory locator
+ */
+public class EndOfCentralDirectoryLocator64 extends Decoder {
     public long diskNumCentralDir;
     public long offset;
     public long totalNumDisks;
