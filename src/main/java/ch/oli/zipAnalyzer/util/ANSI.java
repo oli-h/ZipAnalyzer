@@ -1,7 +1,11 @@
 package ch.oli.zipAnalyzer.util;
 
 public class ANSI {
+    public static final String RESET            = "\u001b[0m";
     public static final String BOLD             = "\u001b[1m";
+    public static final String ITALIC           = "\u001b[3m";
+    public static final String UNDERLINE        = "\u001b[4m";
+    public static final String INVERS           = "\u001b[7m";
 
     public static final String BLACK            = "\u001b[30m";
     public static final String RED              = "\u001b[31m";
@@ -20,7 +24,5 @@ public class ANSI {
     public static final String BRIGHT_MAGENTA   = "\u001b[95m";
     public static final String BRIGHT_CYAN      = "\u001b[96m";
     public static final String BRIGHT_WHITE     = "\u001b[97m";
-    public static final String UNDERLINE        = "\u001b[4m";
-    public static final String RESET            = "\u001b[0m";
 
 }

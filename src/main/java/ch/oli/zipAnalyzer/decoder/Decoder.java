@@ -101,9 +101,10 @@ public abstract class Decoder {
         for (Field fd : fields) {
             if (fd.length > 0) {
                 sb.append(colorForFieldName(fd.name));
-                String format = String.format("%%-%ds ", fd.length * 2);
+                String format = String.format("%%-%ds", fd.length * 2);
                 sb.append(String.format(format, fd.name));
                 sb.append(ANSI.RESET);
+                sb.append(" ");
             }
         }
         return sb.toString();
