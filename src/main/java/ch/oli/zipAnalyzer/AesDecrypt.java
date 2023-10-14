@@ -72,18 +72,13 @@ public class AesDecrypt {
         cipher.init(Cipher.ENCRYPT_MODE, secretKey);
         byte[] counter          = new byte[16];
         byte[] encryptedCounter = new byte[16];
-        for (int i = 0; i < data.length; ) {
-            // 1. count the counter
-            int n = 0;
-            while ((n < counter.length) && (++counter[n] == 0)) {
-                n++;
+        for (int i = 0; i < data.length; i++) {
+            // every block = every 16 bytes: increase and encrypt counter
+            if ((i & 15) == 0) {
+                for (int n = 0; (n < counter.length) && (++counter[n] == 0); n++) ;
+                cipher.update(counter, 0, 16, encryptedCounter);
             }
-            // 2. encrypt the counter
-            cipher.doFinal(counter, 0, 16, encryptedCounter);
-            // 3. XOR byte-by-byte
-            for (int j = 0; j < 16 && i < data.length; j++, i++) {
-                data[i] ^= encryptedCounter[j];
-            }
+            data[i] ^= encryptedCounter[i & 15]; // decrypt by XORing
         }
         System.out.println(new String(data));
     }
