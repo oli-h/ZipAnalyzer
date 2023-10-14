@@ -42,8 +42,8 @@ public class AesDecrypt {
         // see https://www.winzip.com/en/support/aes-encryption/#key-generation
         // see also https://github.com/lclevy/unarcrypto/blob/master/ziparchive.py
         int keySize = 32; // 32 bytes = 256 bits for AES256
-        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1000, (2 * keySize + 2) * 8);
         SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1000, (2 * keySize + 2) * 8);
         byte[] derivedKeys = skf.generateSecret(spec).getEncoded();
         ByteArrayInputStream bais = new ByteArrayInputStream(derivedKeys);
         byte[] aesKey     = bais.readNBytes(keySize); // the "encryption key"
@@ -56,8 +56,7 @@ public class AesDecrypt {
         System.out.println("---------------------------------------------------------------");
 
         Mac mac = Mac.getInstance("HmacSHA1");
-        SecretKeySpec macSecretKey = new SecretKeySpec(macKey, "HmacSHA1");
-        mac.init(macSecretKey);
+        mac.init(new SecretKeySpec(macKey, "HmacSHA1"));
         byte[] hmacOfEncryptedData = mac.doFinal(data);
         // check HMAC: first 10 bytes (80 bits) bits must be identical as it's a HMAC-SHA1-80
         System.out.println("HMAC in header     : " + HexFormat.of().formatHex(hmacInHeader));
@@ -68,8 +67,7 @@ public class AesDecrypt {
         // Java's CounterMode is hard coded to "Big"-endian (see com.sun.crypto.provider.CounterMode#increment)
         // --> we can't use "AES/CTR/NoPadding" and we need to do our own CTR-Mode
         Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
-        SecretKeySpec secretKey = new SecretKeySpec(aesKey, "AES");
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(aesKey, "AES"));
         byte[] counter          = new byte[16];
         byte[] encryptedCounter = new byte[16];
         for (int i = 0; i < data.length; i++) {
