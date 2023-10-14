@@ -1,19 +1,23 @@
 package ch.oli.zipAnalyzer;
 
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.Provider;
+import java.security.Security;
 import java.util.Arrays;
 import java.util.HexFormat;
 
 public class AesDecrypt {
 
     public static void main(String[] args) throws Exception {
+//        listAlgos();
+
         Path path = Path.of("crypt-aes.zip");
         String password = "GEHEIM";
 
@@ -27,8 +31,8 @@ public class AesDecrypt {
         is.skip(52);
         byte[] salt            = is.readNBytes(sizeSalt      );
         byte[] pwVerification1 = is.readNBytes(sizePwVerifier);
-        byte[] chipherText     = is.readNBytes(sizeChiffre   );
-        byte[] hmac            = is.readNBytes(sizeHmac      );
+        byte[] cipherText      = is.readNBytes(sizeChiffre   );
+        byte[] hmacHeader      = is.readNBytes(sizeHmac      );
 
         // see https://github.com/lclevy/unarcrypto/blob/master/ziparchive.py
         PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1000, (32 + 32 + 2) * 8);
@@ -38,47 +42,45 @@ public class AesDecrypt {
         byte[] macKey          = Arrays.copyOfRange(derivedKeys, 32, 64);
         byte[] pwVerification2 = Arrays.copyOfRange(derivedKeys, 64, 66);
 
-        // must be identical
-        System.out.println(HexFormat.of().formatHex(pwVerification1));
-        System.out.println(HexFormat.of().formatHex(pwVerification2));
+        // check password: those 16 bits must be identical
+        System.out.println("PW-Verification from password: " + HexFormat.of().formatHex(pwVerification1));
+        System.out.println("PW-Verification from file    : " + HexFormat.of().formatHex(pwVerification2));
+        System.out.println("---------------------------------------------------------------");
 
+        // ZIP uses "Big-Endian" Counter
+        // --> use of "AES/CTR/NoPadding" impossible as appropriate Java-Crypto-Implementation is hard coded to a Little-Endian counter
+        Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
         SecretKeySpec secretKey = new SecretKeySpec(aesKey, "AES");
-        Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
-        // ZIP-AES uses Little-Endian-Counter but "AES/CTR/NoPadding" would increase counter as Bit-Endian
-        // Therefore we need to count by ourselves and re-init the cipher for every single block :-/
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
         byte[] counter = new byte[16];
-        for (int block = 0; block < chipherText.length / 16; block++) {
-            long xxx = block + 1;
-            for (int i = 0; xxx > 0; i++) {
-                counter[i] = (byte) (xxx);
-                xxx >>= 8;
-            }
-            IvParameterSpec iv = new IvParameterSpec(counter);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, iv);
+        for (int block = 0; block <= cipherText.length / 16; block++) {
+            for (int n = 0; (n < counter.length) && (++counter[n] == 0); n++) {}
+            byte[] cipherCounter = cipher.doFinal(counter);
 
-            byte[] clearText = cipher.doFinal(Arrays.copyOfRange(chipherText, block * 16, block * 16 + 16));
-            System.out.print(new String(clearText));
+            for (int i = 0; i < 16 && i + block * 16 < cipherText.length; i++) {
+                byte x = cipherText[block * 16 + i];
+                byte y = cipherCounter[i];
+                byte clearText = (byte) (x^y);
+                System.out.print((char)clearText);
+            }
         }
 
-//        for (Provider provider: Security.getProviders()) {
-//            System.out.println(provider.getName());
-//            for (String key: provider.stringPropertyNames())
-//                System.out.println("\t" + key + "\t" + provider.getProperty(key));
-//        }
-
-//        int pos = 0;
-//        while (true) {
-//            System.out.printf("%04x:", pos);
-//            for (int i = 0; i < 16; i++) {
-//                int val = is.read();
-//                if (val < 0) {
-//                    return;
-//                }
-//                System.out.printf(" %02x", val & 0xFF);
-//                pos++;
-//            }
-//            System.out.println();
-//        }
+        System.out.println("---------------------------------------------------------------");
+        Mac mac = Mac.getInstance("HmacSHA1");
+        SecretKeySpec macSecretKey = new SecretKeySpec(macKey, "HmacSHA1");
+        mac.init(macSecretKey);
+        byte[] hmacCalculated = mac.doFinal(cipherText);
+        // check password: first 10 bytes (80 bits) bits must be identical
+        System.out.println("HMAC from header   : "+HexFormat.of().formatHex(hmacHeader));
+        System.out.println("HMAC encrypted data: "+HexFormat.of().formatHex(hmacCalculated));
     }
 
+
+    private static void listAlgos() {
+        for (Provider provider: Security.getProviders()) {
+            System.out.println(provider.getName());
+            for (String key: provider.stringPropertyNames())
+                System.out.println("\t" + key + "\t" + provider.getProperty(key));
+        }
+    }
 }
