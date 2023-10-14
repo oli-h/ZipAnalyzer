@@ -29,10 +29,10 @@ public class AesDecrypt {
 
         InputStream is = Files.newInputStream(path);
         is.skip(52);
-        byte[] salt            = is.readNBytes(sizeSalt      );
-        byte[] pwVerification1 = is.readNBytes(sizePwVerifier);
-        byte[] cipherText      = is.readNBytes(sizeChiffre   );
-        byte[] hmacHeader      = is.readNBytes(sizeHmac      );
+        byte[] salt               = is.readNBytes(sizeSalt      );
+        byte[] pwVerifierInHeader = is.readNBytes(sizePwVerifier);
+        byte[] data               = is.readNBytes(sizeChiffre   );
+        byte[] hmacInHeader       = is.readNBytes(sizeHmac      );
 
         // see https://github.com/lclevy/unarcrypto/blob/master/ziparchive.py
         PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1000, (32 + 32 + 2) * 8);
@@ -40,39 +40,45 @@ public class AesDecrypt {
         byte[] derivedKeys = skf.generateSecret(spec).getEncoded();
         byte[] aesKey          = Arrays.copyOfRange(derivedKeys,  0, 32);
         byte[] macKey          = Arrays.copyOfRange(derivedKeys, 32, 64);
-        byte[] pwVerification2 = Arrays.copyOfRange(derivedKeys, 64, 66);
+        byte[] pwVerifier      = Arrays.copyOfRange(derivedKeys, 64, 66);
 
-        // check password: those 16 bits must be identical
-        System.out.println("PW-Verification from password: " + HexFormat.of().formatHex(pwVerification1));
-        System.out.println("PW-Verification from file    : " + HexFormat.of().formatHex(pwVerification2));
+        // check password: those 16 bits must be identical (i.e.: chance 1:65536 to have a wrong password and to decrypt to rubbish)
+        System.out.println("PW-Verification in header    : " + HexFormat.of().formatHex(pwVerifierInHeader));
+        System.out.println("PW-Verification from password: " + HexFormat.of().formatHex(pwVerifier));
         System.out.println("---------------------------------------------------------------");
 
-        // ZIP uses "Big-Endian" Counter
-        // --> use of "AES/CTR/NoPadding" impossible as appropriate Java-Crypto-Implementation is hard coded to a Little-Endian counter
-        Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
-        SecretKeySpec secretKey = new SecretKeySpec(aesKey, "AES");
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-        byte[] counter = new byte[16];
-        for (int block = 0; block <= cipherText.length / 16; block++) {
-            for (int n = 0; (n < counter.length) && (++counter[n] == 0); n++) {}
-            byte[] cipherCounter = cipher.doFinal(counter);
-
-            for (int i = 0; i < 16 && i + block * 16 < cipherText.length; i++) {
-                byte x = cipherText[block * 16 + i];
-                byte y = cipherCounter[i];
-                byte clearText = (byte) (x^y);
-                System.out.print((char)clearText);
-            }
-        }
-
-        System.out.println("---------------------------------------------------------------");
         Mac mac = Mac.getInstance("HmacSHA1");
         SecretKeySpec macSecretKey = new SecretKeySpec(macKey, "HmacSHA1");
         mac.init(macSecretKey);
-        byte[] hmacCalculated = mac.doFinal(cipherText);
-        // check password: first 10 bytes (80 bits) bits must be identical
-        System.out.println("HMAC from header   : "+HexFormat.of().formatHex(hmacHeader));
-        System.out.println("HMAC encrypted data: "+HexFormat.of().formatHex(hmacCalculated));
+
+        // ZIP uses a "Little"-Endian counter-mode (CTR)
+        // Java's CounterMode is hard coded to "Big"-endian (see com.sun.crypto.provider.CounterMode#increment)
+        // --> we can't use "AES/CTR/NoPadding" and we need to do our own CTR-Mode
+        Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
+        SecretKeySpec secretKey = new SecretKeySpec(aesKey, "AES");
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+        byte[] counter          = new byte[16];
+        byte[] encryptedCounter = new byte[16];
+        for (int i = 0; i < data.length; ) {
+            // 1. count the counter
+            int n = 0;
+            while ((n < counter.length) && (++counter[n] == 0)) {
+                n++;
+            }
+            // 2. encrypt the counter
+            cipher.doFinal(counter, 0, 16, encryptedCounter);
+            // 3. XOR byte-by-byte
+            for (int j = 0; j < 16 && i < data.length; j++, i++) {
+                mac.update(data[i]);
+                data[i] ^= encryptedCounter[j];
+            }
+        }
+        System.out.println(new String(data));
+
+        System.out.println("---------------------------------------------------------------");
+        // check HMAC: first 10 bytes (80 bits) bits must be identical
+        System.out.println("HMAC in header     : " + HexFormat.of().formatHex(hmacInHeader));
+        System.out.println("HMAC encrypted data: " + HexFormat.of().formatHex(mac.doFinal()));
     }
 
 
