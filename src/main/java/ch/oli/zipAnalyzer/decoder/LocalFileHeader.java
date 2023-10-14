@@ -53,6 +53,7 @@ public class LocalFileHeader extends Decoder {
                 case 0x000a -> "NTFS";
                 case 0x5455 -> "extended-timestamp";
                 case 0x7875 -> "newer UID/GID";
+                case 0x9901 -> "AE-x";
                 default -> "?";
             };
             if (id == 0x0001) {
