@@ -5,12 +5,12 @@ import javax.crypto.Mac;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.Provider;
 import java.security.Security;
-import java.util.Arrays;
 import java.util.HexFormat;
 
 public class AesDecrypt {
@@ -18,29 +18,37 @@ public class AesDecrypt {
     public static void main(String[] args) throws Exception {
 //        listAlgos();
 
+        // First: create an AES-Encrypted ZIP-file with 7-Zip-Command-Line-Tool:
+        //      7z a -pGEHEIM -mem=AES256 -mx=0 crypt-aes.zip APPNOTE.TXT
+        // -pGEHEIM    : sets encryption password
+        // -mem=AES256 : sets encryption method
+        // -mx=0       : no compression (i.e. 'STORE') so we can easily print the decrypted APPNOTE.TXT to console here
         Path path = Path.of("crypt-aes.zip");
         String password = "GEHEIM";
+        InputStream is = Files.newInputStream(path);
+        is.skip(52);                       // hard coded for now
+        final int compressedSize = 174613; // hard coded for now, too: found in from local header
 
-        int compressedSize = 174613; // from local header
+        // see https://www.winzip.com/en/support/aes-encryption/#file-format1
         int sizeSalt       = 16; // for AES256: 128 bits = 16 bytes
         int sizePwVerifier =  2;
+        int sizeData       = compressedSize - sizeSalt - sizePwVerifier - 10;
         int sizeHmac       = 10;
-        int sizeChiffre    = compressedSize - sizeSalt - sizePwVerifier - sizeHmac;
-
-        InputStream is = Files.newInputStream(path);
-        is.skip(52);
         byte[] salt               = is.readNBytes(sizeSalt      );
         byte[] pwVerifierInHeader = is.readNBytes(sizePwVerifier);
-        byte[] data               = is.readNBytes(sizeChiffre   );
+        byte[] data               = is.readNBytes(sizeData      );
         byte[] hmacInHeader       = is.readNBytes(sizeHmac      );
 
-        // see https://github.com/lclevy/unarcrypto/blob/master/ziparchive.py
-        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1000, (32 + 32 + 2) * 8);
+        // see https://www.winzip.com/en/support/aes-encryption/#key-generation
+        // see also https://github.com/lclevy/unarcrypto/blob/master/ziparchive.py
+        int keySize = 32; // 32 bytes = 256 bits for AES256
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1000, (2 * keySize + 2) * 8);
         SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
         byte[] derivedKeys = skf.generateSecret(spec).getEncoded();
-        byte[] aesKey          = Arrays.copyOfRange(derivedKeys,  0, 32);
-        byte[] macKey          = Arrays.copyOfRange(derivedKeys, 32, 64);
-        byte[] pwVerifier      = Arrays.copyOfRange(derivedKeys, 64, 66);
+        ByteArrayInputStream bais = new ByteArrayInputStream(derivedKeys);
+        byte[] aesKey     = bais.readNBytes(keySize); // the "encryption key"
+        byte[] macKey     = bais.readNBytes(keySize); // the "authentication key"
+        byte[] pwVerifier = bais.readNBytes(2);       // the "password verification value"
 
         // check password: those 16 bits must be identical (i.e.: chance 1:65536 to have a wrong password and to decrypt to rubbish)
         System.out.println("PW-Verification in header    : " + HexFormat.of().formatHex(pwVerifierInHeader));
@@ -50,6 +58,11 @@ public class AesDecrypt {
         Mac mac = Mac.getInstance("HmacSHA1");
         SecretKeySpec macSecretKey = new SecretKeySpec(macKey, "HmacSHA1");
         mac.init(macSecretKey);
+        byte[] hmacOfEncryptedData = mac.doFinal(data);
+        // check HMAC: first 10 bytes (80 bits) bits must be identical as it's a HMAC-SHA1-80
+        System.out.println("HMAC in header     : " + HexFormat.of().formatHex(hmacInHeader));
+        System.out.println("HMAC encrypted data: " + HexFormat.of().formatHex(hmacOfEncryptedData));
+        System.out.println("---------------------------------------------------------------");
 
         // ZIP uses a "Little"-Endian counter-mode (CTR)
         // Java's CounterMode is hard coded to "Big"-endian (see com.sun.crypto.provider.CounterMode#increment)
@@ -69,16 +82,10 @@ public class AesDecrypt {
             cipher.doFinal(counter, 0, 16, encryptedCounter);
             // 3. XOR byte-by-byte
             for (int j = 0; j < 16 && i < data.length; j++, i++) {
-                mac.update(data[i]);
                 data[i] ^= encryptedCounter[j];
             }
         }
         System.out.println(new String(data));
-
-        System.out.println("---------------------------------------------------------------");
-        // check HMAC: first 10 bytes (80 bits) bits must be identical
-        System.out.println("HMAC in header     : " + HexFormat.of().formatHex(hmacInHeader));
-        System.out.println("HMAC encrypted data: " + HexFormat.of().formatHex(mac.doFinal()));
     }
 
 
