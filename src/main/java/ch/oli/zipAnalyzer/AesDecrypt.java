@@ -13,6 +13,7 @@ import java.security.Provider;
 import java.security.Security;
 import java.util.Arrays;
 import java.util.HexFormat;
+import java.util.Set;
 
 public class AesDecrypt {
 
@@ -29,27 +30,48 @@ public class AesDecrypt {
         InputStream is = Files.newInputStream(path);
         is.skip(52);                       // hard coded for now
         int compressedSize = 174613; // hard coded for now, too: found in from local header
+        byte[] compressedAndEncryptedFileData = is.readNBytes(compressedSize);
+
+        byte[] decryptedFile = decryptAES256(compressedAndEncryptedFileData, password, 256);
+
+        System.out.println(new String(decryptedFile));
+    }
+
+    /**
+     * @param compressedAndEncryptedFileData bytes from the ZIP-File (the "file data" after Local Header)
+     * @param password the encryption password
+     * @param keySizeBits 128, 196 or 256 for AES128, AES196 or AES256
+     */
+    public static byte[] decryptAES256(byte[] compressedAndEncryptedFileData, String password, int keySizeBits) throws Exception {
+        if (!Set.of(128, 196, 256).contains(keySizeBits)) {
+            throw new RuntimeException("keySizeBits must be one of 128,196,256 but is " + keySizeBits);
+        }
+        final int sizeKey = keySizeBits / 8;
 
         // see https://www.winzip.com/en/support/aes-encryption/#file-format1
-        int sizeSalt       = 16; // for AES256: 128 bits = 16 bytes
-        int sizePwVerifier =  2;
-        int sizeData       = compressedSize - sizeSalt - sizePwVerifier - 10;
-        int sizeHmac       = 10;
-        byte[] salt               = is.readNBytes(sizeSalt      );
-        byte[] pwVerifierInHeader = is.readNBytes(sizePwVerifier);
-        byte[] data               = is.readNBytes(sizeData      );
-        byte[] hmacInHeader       = is.readNBytes(sizeHmac      );
+        byte[] salt, pwVerifierInHeader, data, hmacInHeader;
+        final int sizeSalt       = sizeKey / 2; // e.g. 16 (128 bits) for AES256
+        final int sizePwVerifier =  2;          // fix size
+        final int sizeHmac       = 10;          // fix size
+        final int sizeData       = compressedAndEncryptedFileData.length - sizeSalt - sizePwVerifier - sizeHmac;
+        try (ByteArrayInputStream is = new ByteArrayInputStream(compressedAndEncryptedFileData)) {
+            salt               = is.readNBytes(sizeSalt      );
+            pwVerifierInHeader = is.readNBytes(sizePwVerifier);
+            data               = is.readNBytes(sizeData      );
+            hmacInHeader       = is.readNBytes(sizeHmac      );
+        }
 
         // see https://www.winzip.com/en/support/aes-encryption/#key-generation
         // see also https://github.com/lclevy/unarcrypto/blob/master/ziparchive.py
-        int keySize = 32; // 32 bytes = 256 bits for AES256
+        byte[] aesKey, macKey, pwVerifier;
         SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1000, (2 * keySize + sizePwVerifier) * 8);
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1000, (2 * sizeKey + sizePwVerifier) * 8);
         byte[] derivedKeys = skf.generateSecret(spec).getEncoded();
-        ByteArrayInputStream bais = new ByteArrayInputStream(derivedKeys);
-        byte[] aesKey     = bais.readNBytes(keySize       ); // the "encryption key"
-        byte[] macKey     = bais.readNBytes(keySize       ); // the "authentication key"
-        byte[] pwVerifier = bais.readNBytes(sizePwVerifier); // the "password verification value"
+        try (ByteArrayInputStream is = new ByteArrayInputStream(derivedKeys)) {
+            aesKey     = is.readNBytes(sizeKey       ); // the "encryption key"
+            macKey     = is.readNBytes(sizeKey       ); // the "authentication key"
+            pwVerifier = is.readNBytes(sizePwVerifier); // the "password verification value"
+        }
 
         // check password: those 16 bits must be identical
         // --> chance 1:65536 to accept wrong password - then we fail with check of HMAC-SHA1-80
@@ -86,11 +108,10 @@ public class AesDecrypt {
             }
             data[i] ^= encryptedCounter[i & 15]; // decrypt by XORing
         }
-        System.out.println(new String(data));
+        return data;
     }
 
-
-    private static void listAlgos() {
+    public static void listAlgos() {
         for (Provider provider: Security.getProviders()) {
             System.out.println(provider.getName());
             for (String key: provider.stringPropertyNames())
