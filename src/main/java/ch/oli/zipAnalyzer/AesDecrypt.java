@@ -26,15 +26,16 @@ public class AesDecrypt {
         // -mem=AES256 : sets encryption method
         // -mx=0       : no compression (i.e. 'STORE') so we can easily print the decrypted APPNOTE.TXT to console here
         Path path = Path.of("crypt-aes.zip");
-        String password = "GEHEIM";
-        InputStream is = Files.newInputStream(path);
-        is.skip(52);                       // hard coded for now
-        int compressedSize = 174613; // hard coded for now, too: found in from local header
-        byte[] compressedAndEncryptedFileData = is.readNBytes(compressedSize);
+        final byte[] fileData;
+        try (InputStream is = Files.newInputStream(path)) {
+            is.skip(52);                 // take shortcut: hard coded for now. It's the offset 'after' first local header
+            int compressedSize = 174613; // take shortcut: hard coded for now, too. Encoded in local header
+            fileData = is.readNBytes(compressedSize);
+        }
 
-        byte[] decryptedFile = decryptAES256(compressedAndEncryptedFileData, password, 256);
+        byte[] fileDataDecrypted = decryptAES256(fileData, "GEHEIM", 256);
 
-        System.out.println(new String(decryptedFile));
+        System.out.println(new String(fileDataDecrypted));
     }
 
     /**
