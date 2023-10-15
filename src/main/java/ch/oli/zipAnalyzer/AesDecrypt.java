@@ -49,46 +49,48 @@ public class AesDecrypt {
         final int sizeKey = keySizeBits / 8;
 
         // see https://www.winzip.com/en/support/aes-encryption/#file-format1
-        byte[] salt, pwVerifierInHeader, data, hmacInHeader;
-        final int sizeSalt       = sizeKey / 2; // e.g. 16 (128 bits) for AES256
-        final int sizePwVerifier =  2;          // fix size
-        final int sizeHmac       = 10;          // fix size
-        final int sizeData       = compressedAndEncryptedFileData.length - sizeSalt - sizePwVerifier - sizeHmac;
+        final byte[] salt, pwVerifier, data, hmac;
         try (ByteArrayInputStream is = new ByteArrayInputStream(compressedAndEncryptedFileData)) {
-            salt               = is.readNBytes(sizeSalt      );
-            pwVerifierInHeader = is.readNBytes(sizePwVerifier);
-            data               = is.readNBytes(sizeData      );
-            hmacInHeader       = is.readNBytes(sizeHmac      );
+            int sizeSalt       = sizeKey / 2; // e.g. 16 (128 bits) for AES256
+            int sizePwVerifier =  2;          // size is fix
+            int sizeHmac       = 10;          // size is fix
+            int sizeData       = compressedAndEncryptedFileData.length - sizeSalt - sizePwVerifier - sizeHmac;
+            salt       = is.readNBytes(sizeSalt      ); // the "Salt value"
+            pwVerifier = is.readNBytes(sizePwVerifier); // the "Password verification value"
+            data       = is.readNBytes(sizeData      ); // the "Encrypted file data"
+            hmac       = is.readNBytes(sizeHmac      ); // the "Authentication code"
         }
 
         // see https://www.winzip.com/en/support/aes-encryption/#key-generation
         // see also https://github.com/lclevy/unarcrypto/blob/master/ziparchive.py
-        byte[] aesKey, macKey, pwVerifier;
-        SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1000, (2 * sizeKey + sizePwVerifier) * 8);
-        byte[] derivedKeys = skf.generateSecret(spec).getEncoded();
-        try (ByteArrayInputStream is = new ByteArrayInputStream(derivedKeys)) {
-            aesKey     = is.readNBytes(sizeKey       ); // the "encryption key"
-            macKey     = is.readNBytes(sizeKey       ); // the "authentication key"
-            pwVerifier = is.readNBytes(sizePwVerifier); // the "password verification value"
+        final byte[] aesKey, macKey, pwVerifier2;
+        {
+            SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1000, (2 * sizeKey + pwVerifier.length) * 8);
+            byte[] derivedKeys = skf.generateSecret(spec).getEncoded();
+            try (ByteArrayInputStream is = new ByteArrayInputStream(derivedKeys)) {
+                aesKey      = is.readNBytes(sizeKey); // the "encryption key"
+                macKey      = is.readNBytes(sizeKey); // the "authentication key"
+                pwVerifier2 = is.readAllBytes()     ; // the "password verification value"
+            }
         }
 
-        // check password: those 16 bits must be identical
+        System.out.println("PW-Verification in header    : " + HexFormat.of().formatHex(pwVerifier));
+        System.out.println("PW-Verification from password: " + HexFormat.of().formatHex(pwVerifier2));
+        // check password: all 16 bits must be identical
         // --> chance 1:65536 to accept wrong password - then we fail with check of HMAC-SHA1-80
-        System.out.println("PW-Verification in header    : " + HexFormat.of().formatHex(pwVerifierInHeader));
-        System.out.println("PW-Verification from password: " + HexFormat.of().formatHex(pwVerifier));
-        if (Arrays.compare(pwVerifierInHeader, pwVerifier) != 0) {
+        if (Arrays.compare(pwVerifier, pwVerifier2) != 0) {
             throw new RuntimeException("wrong passwort");
         }
         System.out.println("---------------------------------------------------------------");
 
         Mac mac = Mac.getInstance("HmacSHA1");
         mac.init(new SecretKeySpec(macKey, "HmacSHA1"));
-        byte[] hmacOfEncryptedData = mac.doFinal(data); // HMAC is calculated over _encrypted_ data
+        byte[] hmac2 = mac.doFinal(data); // HMAC is calculated over _encrypted_ data
         // ZIP-AES uses HMAC-SHA1-80 - so compare only first 80 bits (=10 bytes)
-        System.out.println("HMAC in header     : " + HexFormat.of().formatHex(hmacInHeader));
-        System.out.println("HMAC encrypted data: " + HexFormat.of().formatHex(hmacOfEncryptedData));
-        if (Arrays.compare(hmacInHeader, 0, 10, hmacOfEncryptedData, 0, 10) != 0) {
+        System.out.println("HMAC in header     : " + HexFormat.of().formatHex(hmac));
+        System.out.println("HMAC encrypted data: " + HexFormat.of().formatHex(hmac2));
+        if (Arrays.compare(hmac, 0, 10, hmac2, 0, 10) != 0) {
             throw new RuntimeException("authentication code mismatch");
         }
         System.out.println("---------------------------------------------------------------");
@@ -101,7 +103,7 @@ public class AesDecrypt {
         byte[] counter          = new byte[16];
         byte[] encryptedCounter = new byte[16];
         for (int i = 0; i < data.length; i++) {
-            // every block = every 16 bytes: increase and encrypt counter
+            // for every block (= every 16 bytes): a) increase counter and b) encrypt counter
             if ((i & 15) == 0) {
                 for (int n = 0; (n < counter.length) && (++counter[n] == 0); n++) ;
                 cipher.update(counter, 0, 16, encryptedCounter);
