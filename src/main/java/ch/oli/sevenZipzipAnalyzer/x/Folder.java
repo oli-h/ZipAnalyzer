@@ -1,6 +1,6 @@
 package ch.oli.sevenZipzipAnalyzer.x;
 
-import ch.oli.sevenZipzipAnalyzer.SevenZipInputStream;
+import ch.oli.sevenZipzipAnalyzer.SevenZipAccess;
 
 public class Folder {
 
@@ -8,7 +8,7 @@ public class Folder {
     final int numInStreamsTotal;
     final int numOutStreamsTotal;
 
-    public Folder(SevenZipInputStream is) {
+    public Folder(SevenZipAccess is) {
         int numCoders = (int) is.UINT64();
         coders = new Coder[numCoders];
         int numInStreamsTotal = 0;

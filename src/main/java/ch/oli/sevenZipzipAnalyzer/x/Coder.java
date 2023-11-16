@@ -1,19 +1,17 @@
 package ch.oli.sevenZipzipAnalyzer.x;
 
-import ch.oli.sevenZipzipAnalyzer.SevenZipInputStream;
+import ch.oli.sevenZipzipAnalyzer.SevenZipAccess;
 
 public class Coder {
 
-    final byte[] codecId;
-    final boolean isComplexCoder;
-    final boolean thereAreAttributes;
+    public final byte[] codecId;
+    public final boolean isComplexCoder;
+    public final boolean thereAreAttributes;
+    public final int numInStreams;
+    public final int numOutStreams;
+    public final byte[] properties;
 
-    final int numInStreams;
-    final int numOutStreams;
-
-    final byte[] properties;
-
-    Coder(SevenZipInputStream is) {
+    Coder(SevenZipAccess is) {
         int tmp = is.BYTE();
         int codecIdSize = tmp & 15;
         isComplexCoder = (tmp & 0x10) > 0;

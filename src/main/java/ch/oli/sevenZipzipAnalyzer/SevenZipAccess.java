@@ -1,14 +1,14 @@
 package ch.oli.sevenZipzipAnalyzer;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.RandomAccessFile;
 
-public class SevenZipInputStream {
+public class SevenZipAccess {
 
-    private final InputStream is;
+    private final RandomAccessFile raf;
 
-    public SevenZipInputStream(InputStream is) {
-        this.is = is;
+    public SevenZipAccess(RandomAccessFile raf) {
+        this.raf = raf;
     }
 
     public long UINT64() {
@@ -40,7 +40,7 @@ public class SevenZipInputStream {
         try {
             long value = 0;
             for (int i = 0; i < numBytes; i++) {
-                int b = is.read();
+                int b = raf.read();
                 if (b < 0) {
                     throw new RuntimeException("EOF");
                 }
@@ -54,10 +54,8 @@ public class SevenZipInputStream {
 
     public byte[] readBytes(int numBytes) {
         try {
-            byte[] ret = is.readNBytes(numBytes);
-            if (ret.length < numBytes) {
-                throw new RuntimeException("EOF");
-            }
+            byte[] ret = new byte[numBytes];
+            raf.readFully(ret);
             return ret;
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -66,7 +64,7 @@ public class SevenZipInputStream {
 
     public void skip(long numBytes) {
         try {
-            is.skip(numBytes);
+            raf.seek(raf.getFilePointer() + numBytes);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

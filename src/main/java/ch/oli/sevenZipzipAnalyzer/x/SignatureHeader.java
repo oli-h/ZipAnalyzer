@@ -1,6 +1,6 @@
 package ch.oli.sevenZipzipAnalyzer.x;
 
-import ch.oli.sevenZipzipAnalyzer.SevenZipInputStream;
+import ch.oli.sevenZipzipAnalyzer.SevenZipAccess;
 
 public class SignatureHeader {
 
@@ -13,7 +13,7 @@ public class SignatureHeader {
     public final long nextHeaderSize;
     public final int nextHeaderCRC;
 
-    public SignatureHeader(SevenZipInputStream is) {
+    public SignatureHeader(SevenZipAccess is) {
         signature           = is.readBytes(6);
         archiveVersionMajor = is.BYTE();
         archiveVersionMinor = is.BYTE();

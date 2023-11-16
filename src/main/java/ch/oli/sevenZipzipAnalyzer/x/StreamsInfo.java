@@ -1,13 +1,13 @@
 package ch.oli.sevenZipzipAnalyzer.x;
 
-import ch.oli.sevenZipzipAnalyzer.SevenZipInputStream;
+import ch.oli.sevenZipzipAnalyzer.SevenZipAccess;
 
 public class StreamsInfo {
     public final PackInfo packInfo;
     public final UnPackInfo unPackInfo;
     public final SubStreamsInfo subStreamsInfo;
 
-    public StreamsInfo(SevenZipInputStream is) {
+    public StreamsInfo(SevenZipAccess is) {
         int propId = is.BYTE();
 
         if (propId == 0x06) {

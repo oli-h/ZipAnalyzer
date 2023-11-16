@@ -1,9 +1,9 @@
 package ch.oli.sevenZipzipAnalyzer.x;
 
-import ch.oli.sevenZipzipAnalyzer.SevenZipInputStream;
+import ch.oli.sevenZipzipAnalyzer.SevenZipAccess;
 
 public class SubStreamsInfo {
-    public SubStreamsInfo(SevenZipInputStream is) {
+    public SubStreamsInfo(SevenZipAccess is) {
         throw new RuntimeException("not yet implemented");
     }
 }

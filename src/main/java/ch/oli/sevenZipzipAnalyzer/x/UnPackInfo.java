@@ -1,15 +1,15 @@
 package ch.oli.sevenZipzipAnalyzer.x;
 
-import ch.oli.sevenZipzipAnalyzer.SevenZipInputStream;
+import ch.oli.sevenZipzipAnalyzer.SevenZipAccess;
 
 public class UnPackInfo {
 
-    final int numFolders;
-    final int external;
-    final Folder[] folders;
-    final int[] unPackDigests;
+    public final int numFolders;
+    public final int external;
+    public final Folder[] folders;
+    public final int[] unPackDigests;
 
-    public UnPackInfo(SevenZipInputStream is) {
+    public UnPackInfo(SevenZipAccess is) {
         int propId = is.BYTE();
         if (propId != 0x0B) {
             throw new RuntimeException("Upps " + propId);

@@ -1,15 +1,15 @@
 package ch.oli.sevenZipzipAnalyzer.x;
 
-import ch.oli.sevenZipzipAnalyzer.SevenZipInputStream;
+import ch.oli.sevenZipzipAnalyzer.SevenZipAccess;
 
 public class PackInfo {
 
-    final long packPos;
-    final int numPackStreams;
-    final long[] packSizes;
-    final int[] packStreamDigests;
+    public final long packPos;
+    public final int numPackStreams;
+    public final long[] packSizes;
+    public final int[] packStreamDigests;
 
-    PackInfo(SevenZipInputStream is) {
+    PackInfo(SevenZipAccess is) {
         packPos = is.UINT64();
         numPackStreams = (int) is.UINT64();
 
