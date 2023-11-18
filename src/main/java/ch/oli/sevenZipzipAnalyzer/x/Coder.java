@@ -27,7 +27,7 @@ public class Coder {
         }
 
         if (thereAreAttributes) {
-            int propertiesSize = (int) sza.UINT64();
+            long propertiesSize = sza.UINT64();
             properties = sza.readBytes(propertiesSize);
         } else {
             properties = null;

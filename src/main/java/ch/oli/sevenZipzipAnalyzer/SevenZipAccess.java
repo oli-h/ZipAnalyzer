@@ -55,9 +55,9 @@ public class SevenZipAccess implements Closeable {
         }
     }
 
-    public byte[] readBytes(int numBytes) {
+    public byte[] readBytes(long numBytes) {
         try {
-            byte[] ret = new byte[numBytes];
+            byte[] ret = new byte[Math.toIntExact(numBytes)];
             raf.readFully(ret);
             return ret;
         } catch (IOException e) {

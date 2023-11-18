@@ -21,7 +21,7 @@ public class SevenZipAnalyze {
             System.out.println(headerInfo);
 
             sza.seek(20 + headerInfo.streamInfo.packInfo.packPos);
-            byte[] pack = sza.readBytes((int) headerInfo.streamInfo.packInfo.packSizes[0]);
+            byte[] pack = sza.readBytes(headerInfo.streamInfo.packInfo.packSizes[0]);
             Files.write(Path.of("pack.lzma"), pack);
         }
     }
