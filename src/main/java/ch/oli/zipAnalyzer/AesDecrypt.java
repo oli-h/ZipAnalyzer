@@ -18,7 +18,7 @@ import java.util.Set;
 public class AesDecrypt {
 
     public static void main(String[] args) throws Exception {
-//        listAlgos();
+        listAlgos();
 
         // First: create an AES-Encrypted ZIP-file with 7-Zip-Command-Line-Tool:
         //      7z a -pGEHEIM -mem=AES256 -mx=0 crypt-aes.zip APPNOTE.TXT
@@ -117,8 +117,10 @@ public class AesDecrypt {
     public static void listAlgos() {
         for (Provider provider: Security.getProviders()) {
             System.out.println(provider.getName());
-            for (String key: provider.stringPropertyNames())
+            provider.stringPropertyNames().stream().sorted().forEach(key -> {
                 System.out.println("\t" + key + "\t" + provider.getProperty(key));
+            });
         }
+        System.out.println("----------------------------------------");
     }
 }
