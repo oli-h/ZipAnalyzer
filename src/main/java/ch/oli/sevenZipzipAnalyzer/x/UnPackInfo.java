@@ -9,41 +9,41 @@ public class UnPackInfo {
     public final Folder[] folders;
     public final int[] unPackDigests;
 
-    public UnPackInfo(SevenZipAccess is) {
-        int propId = is.BYTE();
+    public UnPackInfo(SevenZipAccess sza) {
+        int propId = sza.BYTE();
         if (propId != 0x0B) {
             throw new RuntimeException("Upps " + propId);
         }
-        numFolders = (int) is.UINT64();
-        external = is.BYTE();
+        numFolders = (int) sza.UINT64();
+        external = sza.BYTE();
         if (external == 0) {
             folders = new Folder[numFolders];
             for (int i = 0; i < numFolders; i++) {
-                folders[i] = new Folder(is);
+                folders[i] = new Folder(sza);
             }
         } else if (external == 1) {
             folders = null;
-            long dataStreamIndex = is.UINT64();
+            long dataStreamIndex = sza.UINT64();
             throw new RuntimeException("external not yet supported");
         } else {
             throw new RuntimeException("Upps" + external);
         }
 
-        propId = is.BYTE();
+        propId = sza.BYTE();
         if (propId != 0x0C) {
             throw new RuntimeException("Upps " + propId);
         }
         for (int i = 0; i < numFolders; i++) {
             Folder folder = folders[i];
             for (int s = 0; s < folder.numOutStreamsTotal; s++) {
-                long unPackSize = is.UINT64();
+                long unPackSize = sza.UINT64();
             }
         }
 
-        propId = is.BYTE();
+        propId = sza.BYTE();
         if (propId == 0x0A) {
-            unPackDigests = is.readDigests(numFolders);
-            propId = is.BYTE();
+            unPackDigests = sza.readDigests(numFolders);
+            propId = sza.BYTE();
         } else {
             unPackDigests = null;
         }

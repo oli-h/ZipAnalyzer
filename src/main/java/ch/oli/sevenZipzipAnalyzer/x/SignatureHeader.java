@@ -13,13 +13,13 @@ public class SignatureHeader {
     public final long nextHeaderSize;
     public final int nextHeaderCRC;
 
-    public SignatureHeader(SevenZipAccess is) {
-        signature           = is.readBytes(6);
-        archiveVersionMajor = is.BYTE();
-        archiveVersionMinor = is.BYTE();
-        startHeaderCRC      = is.FIX_LENGTH_UINT32(); // over next 8+8+4 Bytes
-        nextHeaderOffset    = is.FIX_LENGTH_UINT64();
-        nextHeaderSize      = is.FIX_LENGTH_UINT64();
-        nextHeaderCRC       = is.FIX_LENGTH_UINT32();
+    public SignatureHeader(SevenZipAccess sza) {
+        signature           = sza.readBytes(6);
+        archiveVersionMajor = sza.BYTE();
+        archiveVersionMinor = sza.BYTE();
+        startHeaderCRC      = sza.FIX_LENGTH_UINT32(); // over next 8+8+4 Bytes
+        nextHeaderOffset    = sza.FIX_LENGTH_UINT64();
+        nextHeaderSize      = sza.FIX_LENGTH_UINT64();
+        nextHeaderCRC       = sza.FIX_LENGTH_UINT32();
     }
 }

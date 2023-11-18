@@ -7,26 +7,26 @@ public class StreamsInfo {
     public final UnPackInfo unPackInfo;
     public final SubStreamsInfo subStreamsInfo;
 
-    public StreamsInfo(SevenZipAccess is) {
-        int propId = is.BYTE();
+    public StreamsInfo(SevenZipAccess sza) {
+        int propId = sza.BYTE();
 
         if (propId == 0x06) {
-            packInfo = new PackInfo(is);
-            propId = is.BYTE();
+            packInfo = new PackInfo(sza);
+            propId = sza.BYTE();
         } else {
             packInfo = null;
         }
 
         if (propId == 0x07) {
-            unPackInfo = new UnPackInfo(is);
-            propId = is.BYTE();
+            unPackInfo = new UnPackInfo(sza);
+            propId = sza.BYTE();
         } else {
             unPackInfo = null;
         }
 
         if (propId == 0x08) {
-            subStreamsInfo = new SubStreamsInfo(is);
-            propId = is.BYTE();
+            subStreamsInfo = new SubStreamsInfo(sza);
+            propId = sza.BYTE();
         } else {
             subStreamsInfo = null;
         }

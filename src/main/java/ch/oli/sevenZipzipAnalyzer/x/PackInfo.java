@@ -9,24 +9,24 @@ public class PackInfo {
     public final long[] packSizes;
     public final int[] packStreamDigests;
 
-    PackInfo(SevenZipAccess is) {
-        packPos = is.UINT64();
-        numPackStreams = (int) is.UINT64();
+    PackInfo(SevenZipAccess sza) {
+        packPos = sza.UINT64();
+        numPackStreams = (int) sza.UINT64();
 
-        int propId = is.BYTE();
+        int propId = sza.BYTE();
         if (propId == 0x09) {
             packSizes = new long[numPackStreams];
             for (int i = 0; i < numPackStreams; i++) {
-                packSizes[i] = is.UINT64();
+                packSizes[i] = sza.UINT64();
             }
-            propId = is.BYTE();
+            propId = sza.BYTE();
         } else {
             packSizes = null;
         }
 
         if (propId == 0x0A) {
-            packStreamDigests=is.readDigests(numPackStreams);
-            propId = is.BYTE();
+            packStreamDigests= sza.readDigests(numPackStreams);
+            propId = sza.BYTE();
         } else {
             packStreamDigests = null;
         }

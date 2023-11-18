@@ -8,13 +8,13 @@ public class Folder {
     final int numInStreamsTotal;
     final int numOutStreamsTotal;
 
-    public Folder(SevenZipAccess is) {
-        int numCoders = (int) is.UINT64();
+    public Folder(SevenZipAccess sza) {
+        int numCoders = (int) sza.UINT64();
         coders = new Coder[numCoders];
         int numInStreamsTotal = 0;
         int numOutStreamsTotal = 0;
         for (int i = 0; i < numCoders; i++) {
-            coders[i] = new Coder(is);
+            coders[i] = new Coder(sza);
             numInStreamsTotal += coders[i].numInStreams;
             numOutStreamsTotal += coders[i].numOutStreams;
         }
@@ -22,14 +22,14 @@ public class Folder {
         this.numOutStreamsTotal = numOutStreamsTotal;
         int numBindPairs = numOutStreamsTotal - 1;
         for (int i = 0; i < numBindPairs; i++) {
-            long inIndex = is.UINT64();
-            long outIndex = is.UINT64();
+            long inIndex = sza.UINT64();
+            long outIndex = sza.UINT64();
         }
 
         int numPackedStreams = numInStreamsTotal - numBindPairs;
         if (numPackedStreams > 1) {
             for (int i = 0; i < numPackedStreams; i++) {
-                long index = is.UINT64();
+                long index = sza.UINT64();
             }
         }
 

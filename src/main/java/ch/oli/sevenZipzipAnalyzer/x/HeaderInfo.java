@@ -5,7 +5,7 @@ import ch.oli.sevenZipzipAnalyzer.SevenZipAccess;
 public class HeaderInfo {
     public final StreamsInfo streamInfo;
 
-    public HeaderInfo(SevenZipAccess is) {
-        streamInfo=new StreamsInfo(is);
+    public HeaderInfo(SevenZipAccess sza) {
+        streamInfo=new StreamsInfo(sza);
     }
 }

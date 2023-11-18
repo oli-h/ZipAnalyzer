@@ -1,14 +1,17 @@
 package ch.oli.sevenZipzipAnalyzer;
 
+import java.io.Closeable;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Path;
 
-public class SevenZipAccess {
+public class SevenZipAccess implements Closeable {
 
     private final RandomAccessFile raf;
 
-    public SevenZipAccess(RandomAccessFile raf) {
-        this.raf = raf;
+    public SevenZipAccess(Path path) throws FileNotFoundException {
+        this.raf = new RandomAccessFile(path.toFile(), "r");
     }
 
     public long UINT64() {
@@ -88,4 +91,14 @@ public class SevenZipAccess {
         }
         return digests;
     }
+
+    public void seek(long pos) throws IOException {
+        raf.seek(pos);
+    }
+
+    @Override
+    public void close() throws IOException {
+        raf.close();
+    }
+
 }
